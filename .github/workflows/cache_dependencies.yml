@@ -1,0 +1,49 @@
+name: Cache Python Dependencies
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: # Allows manual triggering from the GitHub UI
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python environment
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x' # Use the latest stable Python 3.x
+
+    - name: prime-cache-7a08053 # This step caches the pip dependencies
+      id: pip-cache # An ID is needed to reference the cache action's outputs
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip # The directory where pip stores downloaded packages
+        key: cache-7a08053-${{ hashFiles('requirements.txt') }} # Unique key based on requirements.txt
+        restore-keys: |
+          cache-7a08053- # Restore key for partial matches if requirements.txt changes
+
+    - name: Echo cache hit/miss result
+      run: |
+        echo "Cache Hit Status: ${{ steps.pip-cache.outputs.cache-hit }}"
+        if [ "${{ steps.pip-cache.outputs.cache-hit }}" == "true" ]; then
+          echo "Cache hit! Dependencies restored from cache."
+        else
+          echo "Cache miss. Installing dependencies from scratch."
+        fi
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run a dummy script (e.g., linting or tests)
+      run: |
+        echo "Dependencies are ready. Running a dummy task..."
+        python -c "import fastapi; import uvicorn; print('FastAPI and Uvicorn imported successfully.')"
